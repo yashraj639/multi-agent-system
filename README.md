@@ -1,24 +1,26 @@
-# 🔬 Multi-Agent Research System
+# Multi-Agent Research System
 
-A CLI-powered research assistant that takes a plain-English query and produces a polished, source-cited research report — entirely in your terminal. Under the hood, four specialized agents collaborate through a structured pipeline: a **Research Agent** plans and searches the web, a **Parallel Reader** fetches and cleans pages at high speed, a **Writer** synthesizes findings into a structured report, and a **Critic** evaluates the draft before a final revision pass.
+Type a question into your terminal, get back a structured research report with citations. That's the idea.
+
+This is a CLI tool that chains together four agents in a pipeline: one searches the web (via Tavily), one scrapes and cleans the pages in parallel, one writes a structured report from the extracted content, and one critiques the draft so the writer can revise it. The final report renders in the terminal with Rich and auto-saves as markdown.
 
 Built with [LangChain](https://www.langchain.com/), [Tavily](https://tavily.com/), and [Rich](https://github.com/Textualize/rich).
 
 ---
 
-## ✨ Features
+## What It Does
 
-- **Intelligent Query Decomposition** — The Research Agent breaks your question into targeted sub-queries for broader, more relevant coverage.
-- **Parallel Web Scraping** — Pages are fetched concurrently via `ThreadPoolExecutor` and cleaned with BeautifulSoup. Zero LLM tokens wasted on deterministic I/O.
-- **Structured Outputs** — Every stage uses Pydantic schemas with `.with_structured_output()` — no double-parsing, no brittle text extraction.
-- **Critic → Revision Loop** — A dedicated Critic chain evaluates the draft across four dimensions (missing info, unsupported claims, structure, accuracy) before the Writer revises.
-- **Beautiful Terminal UI** — Live spinners, styled Markdown panels, and color-coded critique tables powered by Rich.
-- **Auto-Save** — Reports are automatically saved as timestamped Markdown files in `output/`.
-- **Fast Mode** — Skip the critique/revision round-trip with `--fast` for quicker results on rate-limited free tiers.
+- Breaks your question into multiple search queries to get better coverage from Tavily
+- Fetches all source pages concurrently with `ThreadPoolExecutor` + BeautifulSoup — no LLM tokens burned on what's just HTTP requests and HTML parsing
+- Uses `.with_structured_output()` at every stage, so the data flows through typed Pydantic models instead of hoping the LLM formats text correctly
+- Runs a critic/revision loop: the Writer produces a draft, the Critic flags problems (missing info, unsupported claims, structural issues, accuracy concerns), and the Writer revises
+- Renders the report in a Rich markdown panel with a color-coded critique table
+- Saves reports to `output/report_<timestamp>.md` automatically
+- Pass `--fast` to skip the critique loop when you're on a rate-limited free tier or just want a quick draft
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -27,14 +29,14 @@ Built with [LangChain](https://www.langchain.com/), [Tavily](https://tavily.com/
                                │
                                ▼
                ┌───────────────────────────────┐
-               │       🔍 Research Agent        │
+               │        Research Agent          │
                │  Decomposes query → sub-queries│
                │  Searches Tavily → ResearchPlan│
                └───────────────┬───────────────┘
                                │
                                ▼
                ┌───────────────────────────────┐
-               │      📖 Parallel Reader        │
+               │        Parallel Reader         │
                │  ThreadPoolExecutor + BS4      │
                │  Fetches & cleans all pages    │
                │  → list[Extract]               │
@@ -42,7 +44,7 @@ Built with [LangChain](https://www.langchain.com/), [Tavily](https://tavily.com/
                                │
                                ▼
                ┌───────────────────────────────┐
-               │        ✍️ Writer Chain          │
+               │         Writer Chain           │
                │  LCEL → structured Report      │
                │  (executive summary, sections, │
                │   inline citations)            │
@@ -55,14 +57,14 @@ Built with [LangChain](https://www.langchain.com/), [Tavily](https://tavily.com/
                              │   └──────────────────────┐
                              ▼                          │
                ┌───────────────────────────────┐        │
-               │        🧐 Critic Chain         │        │
+               │         Critic Chain           │        │
                │  Evaluates draft across 4      │        │
                │  dimensions → CritiqueReport   │        │
                └───────────────┬───────────────┘        │
                                │                        │
                                ▼                        │
                ┌───────────────────────────────┐        │
-               │      🛠️ Writer (Revision)      │        │
+               │       Writer (Revision)        │        │
                │  Incorporates feedback →       │        │
                │  revised Report                │        │
                └───────────────┬───────────────┘        │
@@ -71,7 +73,7 @@ Built with [LangChain](https://www.langchain.com/), [Tavily](https://tavily.com/
                                │
                                ▼
                ┌───────────────────────────────┐
-               │     📄 CritiquedReport         │
+               │       CritiquedReport          │
                │  → Rich terminal render        │
                │  → Auto-save to output/*.md    │
                └───────────────────────────────┘
@@ -79,64 +81,59 @@ Built with [LangChain](https://www.langchain.com/), [Tavily](https://tavily.com/
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 multi-agent-system/
 ├── .env.example          # Template for required API keys
 ├── .env                  # Your real secrets (gitignored)
 ├── .gitignore
-├── architect.md          # Detailed architecture plan & design decisions
-├── requirements.txt      # Python dependencies
+├── architect.md          # Architecture plan & design decisions
+├── requirements.txt
 ├── output/               # Auto-saved markdown reports
 └── src/
     └── research_system/
         ├── __init__.py
         ├── config.py         # Settings via pydantic-settings (.env loading)
-        ├── schemas.py        # Pydantic data contracts for every pipeline stage
-        ├── tools.py          # Tavily search wrapper + parallel BeautifulSoup scraper
-        ├── research_agent.py # Query decomposition & Tavily search agent
+        ├── schemas.py        # Pydantic models for every pipeline stage
+        ├── tools.py          # Tavily search wrapper + parallel scraper
+        ├── research_agent.py # Query decomposition & Tavily search
         ├── writer.py         # LCEL chain: sources + extracts → Report
         ├── critic.py         # LCEL chain: draft + extracts → CritiqueReport
-        ├── pipeline.py       # Orchestrates all stages with progress callbacks
-        └── cli.py            # Rich interactive CLI with spinners & rendering
+        ├── pipeline.py       # Orchestrates all stages
+        └── cli.py            # Rich CLI with spinners & rendering
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- **Python 3.10+**
+- Python 3.10+
 - An [OpenRouter](https://openrouter.ai/) API key (free tier works)
-- A [Tavily](https://tavily.com/) API key (free tier: 1,000 searches/month)
+- A [Tavily](https://tavily.com/) API key (free tier gives you 1,000 searches/month)
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/yashraj639/multi-agent-system.git
 cd multi-agent-system
 
-# Create and activate a virtual environment
 python -m venv .venv
 source .venv/bin/activate        # macOS / Linux
 # .venv\Scripts\activate         # Windows
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
 ### Configuration
 
-Copy the example environment file and add your API keys:
-
 ```bash
 cp .env.example .env
 ```
 
-Then edit `.env`:
+Open `.env` and fill in your keys:
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
@@ -147,25 +144,23 @@ TAVILY_K=5
 
 ---
 
-## 💻 Usage
+## Usage
 
-### Run a research query
+Run it:
 
 ```bash
 python -m src.research_system.cli
 ```
 
-You'll get an interactive prompt. Type your research question and watch the pipeline work through each stage with live status spinners.
+You'll get a prompt. Type your research question and the pipeline runs through each stage with live spinners in the terminal.
 
-### Fast mode (skip critique)
+To skip the critique/revision pass:
 
 ```bash
 python -m src.research_system.cli --fast
 ```
 
-This bypasses the Critic evaluation and revision pass — useful when running on free-tier rate limits or when you just need a quick draft.
-
-### Using `uv` (alternative)
+If you use `uv`:
 
 ```bash
 uv pip install -r requirements.txt
@@ -174,38 +169,38 @@ uv run python -m src.research_system.cli
 
 ---
 
-## ⚙️ Configuration Reference
+## Configuration Reference
 
-All settings are loaded from environment variables or `.env` via `pydantic-settings`.
+All settings load from environment variables or `.env` via `pydantic-settings`.
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
-| `OPENROUTER_API_KEY` | — | **Required.** Your OpenRouter API key |
-| `TAVILY_API_KEY` | — | **Required.** Your Tavily search API key |
+| `OPENROUTER_API_KEY` | required | Your OpenRouter API key |
+| `TAVILY_API_KEY` | required | Your Tavily search API key |
 | `MODEL_NAME` | `openrouter/free` | LLM model identifier used across all chains |
-| `TAVILY_K` | `5` | Number of search results per query (1–15) |
+| `TAVILY_K` | `5` | Number of search results per query (1-15) |
 | `MAX_CHARS_PER_PAGE` | `8000` | Max characters extracted per webpage |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter API endpoint |
 
 ---
 
-## 🧩 Tech Stack
+## Tech Stack
 
-| Layer | Technology | Purpose |
+| Layer | Technology | Why |
 | :--- | :--- | :--- |
-| **Orchestration** | LangChain / LCEL | Chain composition & structured output |
-| **LLM Provider** | OpenRouter (OpenAI-compatible) | Model inference (supports free models) |
-| **Web Search** | Tavily | High-quality search results with snippets |
-| **Web Scraping** | BeautifulSoup4 + requests | HTML parsing & clean text extraction |
-| **Data Validation** | Pydantic | Typed schemas for every pipeline stage |
-| **Configuration** | pydantic-settings | `.env` and environment variable management |
-| **Terminal UI** | Rich | Spinners, markdown panels, styled tables |
+| Orchestration | LangChain / LCEL | Chain composition and structured output |
+| LLM | OpenRouter | OpenAI-compatible API, has free models |
+| Search | Tavily | Search API that returns clean snippets |
+| Scraping | BeautifulSoup4 + requests | HTML parsing and text extraction |
+| Data models | Pydantic | Typed schemas and validation |
+| Config | pydantic-settings | Loads `.env` into typed settings |
+| Terminal UI | Rich | Spinners, markdown rendering, tables |
 
 ---
 
-## 📊 Pipeline Data Flow
+## Data Flow
 
-Each stage produces a typed Pydantic model that feeds into the next:
+Each stage produces a typed Pydantic model that the next stage consumes:
 
 ```
 User query (str)
@@ -218,25 +213,24 @@ User query (str)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-1. Fork the repository
+1. Fork the repo
 2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+3. Commit your changes
+4. Push and open a PR
 
 ---
 
-## 📝 License
+## License
 
-This project is open source. See the repository for license details.
+Open source. See the repository for license details.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- [LangChain](https://www.langchain.com/) for the composable AI framework
-- [Tavily](https://tavily.com/) for the research-optimized search API
-- [Rich](https://github.com/Textualize/rich) for beautiful terminal rendering
-- [OpenRouter](https://openrouter.ai/) for unified LLM access with free-tier support
+- [LangChain](https://www.langchain.com/)
+- [Tavily](https://tavily.com/)
+- [Rich](https://github.com/Textualize/rich)
+- [OpenRouter](https://openrouter.ai/)
