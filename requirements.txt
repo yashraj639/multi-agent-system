@@ -1,0 +1,11 @@
+langchain
+langchain-core
+langchain-openai
+langchain-openrouter
+langchain-community
+tavily-python
+beautifulsoup4
+requests
+rich
+pydantic
+pydantic-settings
