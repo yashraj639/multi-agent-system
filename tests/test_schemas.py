@@ -51,7 +51,7 @@ def test_report_and_markdown_serialization():
     )
 
     critique = CritiqueReport(
-        missing_info=[
+        items=[
             CritiqueItem(
                 category="Missing Information",
                 severity="Medium",
