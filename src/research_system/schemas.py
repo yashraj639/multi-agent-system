@@ -41,6 +41,7 @@ class Report(BaseModel):
     title: str
     summary: str
     sections: list[Section] = Field(default_factory=list)
+    diagram: str | None = None
     sources: list[Source] = Field(default_factory=list)
 
 
@@ -72,6 +73,12 @@ class CritiquedReport(BaseModel):
             f"# {self.report.title}\n",
             f"## Executive Summary\n{self.report.summary}\n",
         ]
+
+        if self.report.diagram and self.report.diagram.strip():
+            diag = self.report.diagram.strip()
+            if not diag.startswith("```"):
+                diag = f"```mermaid\n{diag}\n```"
+            lines.append(f"## Conceptual Architecture & Visual Flow\n\n{diag}\n")
 
         for sec in self.report.sections:
             lines.append(f"## {sec.heading}\n{sec.body}\n")
