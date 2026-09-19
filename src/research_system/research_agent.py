@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from src.research_system.config import get_settings
 from src.research_system.schemas import ResearchPlan, Source
-from src.research_system.tools import tavily_search
+from src.research_system.tools import invoke_structured, tavily_search
 
 
 class QueryPlan(BaseModel):
@@ -39,7 +39,7 @@ def plan_search_queries(topic: str, llm: ChatOpenAI | None = None) -> list[str]:
             ]
         )
 
-        plan: QueryPlan = (prompt | model.with_structured_output(QueryPlan)).invoke({"topic": topic})
+        plan: QueryPlan = invoke_structured(model, prompt, {"topic": topic}, QueryPlan)
         return [q.strip() for q in plan.queries if q.strip()] or [topic]
     except Exception:
         return [topic]

@@ -1,4 +1,4 @@
-"""Data schemas and contracts for the Multi-Agent Research System."""
+import re
 
 from pydantic import BaseModel, Field
 
@@ -102,3 +102,14 @@ class CritiquedReport(BaseModel):
             lines.append("")
 
         return "\n".join(lines)
+
+
+def parse_json_response(content: str, model_cls: type[BaseModel]) -> BaseModel:
+    """Extract and parse JSON into a Pydantic model from raw text or markdown code blocks."""
+    text = content.strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    if match:
+        text = match.group(1).strip()
+    elif (start := text.find("{")) != -1 and (end := text.rfind("}")) > start:
+        text = text[start : end + 1]
+    return model_cls.model_validate_json(text)

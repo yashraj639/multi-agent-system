@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 
 from src.research_system.config import get_settings
 from src.research_system.schemas import CritiqueReport, Extract, Report, Source
+from src.research_system.tools import invoke_structured
 
 WRITER_SYSTEM_PROMPT = """You are an elite academic researcher and technical writer preparing a rigorous research report for university submission.
 
@@ -80,7 +81,6 @@ def write_report(
     )
 
     context = format_context(sources, extracts)
-    chain = model.with_structured_output(Report)
 
     if critique and previous_report:
         issues_text = "\n".join(
@@ -97,17 +97,15 @@ def write_report(
                 ("human", REVISION_USER_PROMPT),
             ]
         )
-        report: Report = (prompt | chain).invoke(
-            {
-                "query": query,
-                "context": context,
-                "draft_title": previous_report.title,
-                "draft_summary": previous_report.summary,
-                "draft_sections": sections_text,
-                "critique_assessment": critique.overall_assessment,
-                "critique_issues": issues_text or "General polish requested.",
-            }
-        )
+        vars = {
+            "query": query,
+            "context": context,
+            "draft_title": previous_report.title,
+            "draft_summary": previous_report.summary,
+            "draft_sections": sections_text,
+            "critique_assessment": critique.overall_assessment,
+            "critique_issues": issues_text or "General polish requested.",
+        }
     else:
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -115,12 +113,12 @@ def write_report(
                 ("human", DRAFT_USER_PROMPT),
             ]
         )
-        report: Report = (prompt | chain).invoke(
-            {
-                "query": query,
-                "context": context,
-            }
-        )
+        vars = {
+            "query": query,
+            "context": context,
+        }
+
+    report: Report = invoke_structured(model, prompt, vars, Report)
 
     if not report.sources:
         report.sources = sources

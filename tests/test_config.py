@@ -4,6 +4,7 @@ from src.research_system.config import Settings, get_settings
 
 def test_settings_defaults():
     settings = Settings(
+        _env_file=None,
         openrouter_api_key="test_openrouter_key",
         tavily_api_key="test_tavily_key",
     )

@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 
 from src.research_system.config import get_settings
 from src.research_system.schemas import CritiqueReport, Extract, Report, Source
+from src.research_system.tools import invoke_structured
 from src.research_system.writer import format_context
 
 CRITIC_SYSTEM_PROMPT = """You are a rigorous academic peer-reviewer and senior thesis editor. 
@@ -74,14 +75,13 @@ def critique_report(
         ]
     )
 
-    chain = prompt | model.with_structured_output(CritiqueReport)
-    return chain.invoke(
-        {
-            "query": query,
-            "context": context,
-            "title": report.title,
-            "summary": report.summary,
-            "sections": sections_text,
-            "diagram": report.diagram or "None provided",
-        }
-    )
+    vars = {
+        "query": query,
+        "context": context,
+        "title": report.title,
+        "summary": report.summary,
+        "sections": sections_text,
+        "diagram": report.diagram or "None provided",
+    }
+
+    return invoke_structured(model, prompt, vars, CritiqueReport)
